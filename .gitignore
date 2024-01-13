@@ -1,0 +1,6 @@
+
+Emulator/Terraform/terraform.tfstate.backup
+Emulator/Terraform/terraform.tfstate
+Emulator/Terraform/.terraform/*
+Emulator/Terraform/.terraform.lock.hcl
+**/target
