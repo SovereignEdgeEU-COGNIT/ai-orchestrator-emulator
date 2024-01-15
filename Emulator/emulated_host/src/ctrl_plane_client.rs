@@ -1,5 +1,9 @@
 use reqwest;
-use rocket::serde::json::Json;
+//use rocket::futures::TryFutureExt;
+//use rocket::serde::json::Json;
+use rocket::Config;
+use local_ip_address::local_ip;
+use local_ip_address::list_afinet_netifas;
 use tokio::time;
 use std::{fs, io::Write, path::Path, time::Duration};
 
@@ -13,7 +17,7 @@ pub async fn subscribe(mut cache: Cache) {
 
     loop {
 
-        if let Err(err) = check_files(&mut cache).await{
+        if let Err(err) = check_files(&mut cache).await {
             println!("{:?}", err)
         }
         
@@ -52,16 +56,36 @@ async fn download_file(cache: &mut Cache, file_info: FileInfo ) -> Result<(), Bo
 }
 
 
-pub async fn register_host() -> Result<(), Box<dyn std::error::Error>> {
-    let testval:i32 = 5;
+pub async fn register_host() -> Result<Config, Box<dyn std::error::Error>> {
+    /*let network_interfaces = list_afinet_netifas();
+
+    if let Ok(network_interfaces) = network_interfaces {
+        for (name, ip) in network_interfaces.iter() {
+            println!("{}:\t{:?}", name, ip);
+        }
+    } else {
+        println!("Error getting network interfaces: {:?}", network_interfaces);
+    }*/
+
+    let my_local_ip = local_ip().unwrap();
 
     let client = reqwest::Client::new();
     let url = format!("{}/register", SERVER_URL);
     let res = client.post(url)
-    .json(&testval)
+    .json(&my_local_ip.to_string())
     .send()
     .await?;
 
     println!("{}", res.status().as_str());
-    Ok(())
+
+    let port = res.json::<u16>().await?;
+
+    let config = Config {
+        address: my_local_ip,
+        port: port,
+        ..Config::default()
+    };
+    
+    println!("{}", port);
+    Ok(config)
 }
