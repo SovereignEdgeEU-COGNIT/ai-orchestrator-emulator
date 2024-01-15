@@ -12,3 +12,6 @@ Apply changes
 [Link](https://registry.terraform.io/providers/kreuzwerker/docker/latest/docs/resources/image)
 You can rebuild the containers using triggers of e.g. source code change.
 Is this a better approach than pushing the info from some source instead?
+
+### Multiple network interfaces 
+[Link](https://stackoverflow.com/questions/34110416/start-container-with-multiple-network-interfaces)

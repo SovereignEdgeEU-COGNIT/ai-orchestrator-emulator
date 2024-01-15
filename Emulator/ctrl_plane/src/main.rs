@@ -3,12 +3,9 @@
 use rocket::fs::NamedFile;
 use rocket::serde::{json::Json, Serialize};
 use rocket::State;
-use std::collections::LinkedList;
-//use serde::Serialize;
-//use serde_json::json;
 use std::path::{Path, PathBuf};
 use std::fs;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use sha2::{Sha256, Digest};
 
 #[derive(Serialize)]
@@ -17,9 +14,10 @@ struct FileInfo {
     hash: String,
 }
 
+#[derive(Debug, Serialize, Clone)]
 struct Host {
     ip: String,
-    port: u32
+    port: u16
 }
 
 #[get("/")]
@@ -67,12 +65,19 @@ fn list_files() -> Json<Vec<FileInfo>> {
  * The port number assigned to the new host.
  */
 #[post("/register", format = "json", data = "<node_ip>")]
-fn register_host(node_ip: Json<String>, hosts_shared: &State<Mutex<Vec<Host>>>) -> Json<u32> {
+fn register_host(node_ip: Json<String>, hosts_shared: &State<Mutex<Vec<Host>>>) -> Json<u16> {
     let mut hosts = hosts_shared.lock().unwrap();
     let last_alloc_port = hosts.last().unwrap_or(&Host{ip: String::new(), port:1233}).port;
     let host = Host{ip: node_ip.0, port: last_alloc_port + 1};
     hosts.push(host);
+    hosts.iter().for_each(|x| println!("{:?}", x));
     Json(last_alloc_port + 1)
+}
+
+#[get("/hosts")]
+fn get_hosts(hosts_shared: &State<Mutex<Vec<Host>>>) -> Json<Vec<Host>> {
+    let hosts = hosts_shared.lock().unwrap();
+    Json(hosts.iter().cloned().collect())
 }
 
 /**
@@ -96,8 +101,8 @@ fn hash_file(path: &Path) -> String {
 fn rocket() -> _ {
     
     let hosts = Vec::<Host>::new();
-    let hosts_arc = Mutex::new(hosts);
+    let hosts_shared = Mutex::new(hosts);
     rocket::build()
-        .mount("/", routes![index, list_files, files, register_host])
-        .manage(hosts_arc)
+        .mount("/", routes![index, list_files, files, register_host, get_hosts])
+        .manage(hosts_shared)
 }
