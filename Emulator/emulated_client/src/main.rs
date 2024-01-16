@@ -4,6 +4,8 @@ mod file_cache;
 
 use ctrl_plane_client::FOLDER_NAME;
 use std::{sync::{Mutex, Arc}, error::Error};
+use tokio::time;
+use std::{time::Duration};
 
 #[tokio::main]
 async fn main() {
@@ -15,8 +17,12 @@ async fn main() {
     let host_subscriber = ctrl_plane_client::subscribe_hosts(Arc::clone(&hosts));
     let _ = tokio::spawn(host_subscriber);
 
-    let file_subscriber = ctrl_plane_client::subscribe_files(file_cache);
-    let _ = tokio::spawn(file_subscriber);
+    /* let file_subscriber = ctrl_plane_client::subscribe_files(file_cache);
+    let _ = tokio::spawn(file_subscriber); */
 
-    host_client::emulate_client(Arc::clone(&hosts)).await;
+    //host_client::emulate_client(Arc::clone(&hosts)).await;
+    time::sleep(Duration::from_secs(1)).await;
+    host_client::test_new(hosts);
+
+    time::sleep(Duration::from_secs(5)).await;
 }    
