@@ -5,8 +5,8 @@ use std::{sync::{Mutex, Arc}, time::Duration, io::Write, future::Future, fs, pat
 
 use reqwest;
 
-const HOSTS_URL: &str = "http://localhost:8000/hosts";
-const FILES_URL: &str = "http://localhost:8000/files";
+const HOSTS_URL: &str = "http://192.168.1.156:8000/hosts";
+const FILES_URL: &str = "http://192.168.1.156:8000/files";
 pub const FOLDER_NAME: &str = "./local_cache";
 use crate::file_cache::{Cache, FileInfo};
 

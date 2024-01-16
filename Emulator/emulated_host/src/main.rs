@@ -24,7 +24,7 @@ async fn main() {
             let ctrl_plane_client = ctrl_plane_client::subscribe(file_cache);
             let _ = tokio::spawn(ctrl_plane_client);
             let client_server = client_server::serve(host_config);
-            client_server.await;
+            let _ = client_server.await;
             ()
         }
         Err(e) => {
