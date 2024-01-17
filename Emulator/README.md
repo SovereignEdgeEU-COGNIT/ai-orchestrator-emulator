@@ -1,0 +1,1 @@
+rate(container_cpu_user_seconds_total[10s])
