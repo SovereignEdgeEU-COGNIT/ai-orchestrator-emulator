@@ -8,12 +8,23 @@ use rocket::serde::{json::Json, Serialize};
 use tokio::time;
 use std::{fs, io::Write, path::Path, time::Duration};
 use gethostname::gethostname;
+use std::env;
 
 use crate::file_cache::{Cache, FileInfo};
 
-const FILES_URL: &str = "http://ctrl_plane:8000/files";
-const SERVER_URL: &str = "http://ctrl_plane:8000";
+//const FILES_URL: &str = "http://192.168.1.86:8000/files";
+//const SERVER_URL: &str = "http://192.168.1.86:8000";
+//const FILES_URL: &str = "http://ctrl_plane:8000/files";
+//const SERVER_URL: &str = "http://ctrl_plane:8000";
 pub const FOLDER_NAME: &str = "./local_cache";
+
+
+fn ctrl_plane_url() -> String {
+    let host_addr = env::var("CTRL_PLANE_ADDR").expect("Missing CTRL_PLANE_ADDR env variable");
+    let host_port = env::var("CTRL_PLANE_PORT").expect("Missing CTRL_PLANE_PORT env variable");
+    format!("{}:{}", host_addr, host_port)
+}
+
 
 pub async fn subscribe(mut cache: Cache) {
 
@@ -28,7 +39,8 @@ pub async fn subscribe(mut cache: Cache) {
 }
 
 async fn check_files(cache: &mut Cache) -> Result<(), Box<dyn std::error::Error>> {
-    let response = reqwest::get(FILES_URL).await?;
+    let url = format!("http://{}/files", ctrl_plane_url());
+    let response = reqwest::get(url).await?;
     let files = response.json::<Vec<FileInfo>>().await?;
 
     for file_info in files {
@@ -46,7 +58,8 @@ async fn check_files(cache: &mut Cache) -> Result<(), Box<dyn std::error::Error>
 
 async fn download_file(cache: &mut Cache, file_info: FileInfo ) -> Result<(), Box<dyn std::error::Error>> {
     let filename = file_info.get_filename();
-    let url = format!("{}/{}", FILES_URL, filename);
+    let url = format!("http://{}/files", ctrl_plane_url());
+    let url = format!("{}/{}", url, filename);
     println!("{:?}", file_info);
 
     let file_data = reqwest::get(&url).await?.bytes().await?;
@@ -77,10 +90,11 @@ pub async fn register_host() -> Result<Config, Box<dyn std::error::Error>> {
 
     let my_local_ip = local_ip().unwrap();
     //println!("Hostname: {:?}", gethostname());
-    let host = Host{ip: my_local_ip.to_string(), name: gethostname(), port: 0};
+    let hostname = gethostname().to_str().unwrap().to_string();
+    let host = Host{ip: my_local_ip.to_string(), name: hostname, port: 0};
 
     let client = reqwest::Client::new();
-    let url = format!("{}/register", SERVER_URL);
+    let url = format!("http://{}/register", ctrl_plane_url());
     let res = client.post(url)
     .json(&host)
     .send()
