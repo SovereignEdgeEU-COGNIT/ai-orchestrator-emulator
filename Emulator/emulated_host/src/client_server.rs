@@ -12,29 +12,41 @@ fn index() -> &'static str {
 }
 
 #[post("/run_dummy", format = "json", data = "<cmd_args>")]
-fn run_dummy_app(cmd_args: Json<Vec<String>>) -> Json<String> {
+fn run_dummy_app(cmd_args: Json<String>) -> Json<String> {
     
     let flags = cmd_args.0;
     let error_msg = format!("failed to execute process using {:?}", &flags);
+    println!("Got {}, {}, {}", flags, flags.contains("\n"), flags.contains("\r"));
         
-    let output = if cfg!(target_os = "windows") {
+    /* let output = if cfg!(target_os = "windows") {
         Command::new("cmd")
-            .args(flags)
+            .args(vec!["/C", &format!("echo {}", flags.trim())])
             .output()
             .expect(&error_msg) //
     } else {
         Command::new("sh")
-            .args(flags)
+            //.args(vec![flags.trim()])
+            //.args(vec!["--class cpu","--all 1","-t 20s"])
+            .args(vec!["-c 'stress-ng --class cpu --all 1 -t 5s'"])
             .output()
             .expect(&error_msg)
-    };
+    }; */
+    if cfg!(target_os = "windows") {
+        Command::new("cmd")
+            .args(vec!["/C", &format!("echo {}", flags.trim())])
+            .output()
+            .expect(&error_msg); //
+    } else {
+        Command::new("./i_hate_my_life.sh").arg(flags).spawn();
+    }
 
-    let output_parsed = match str::from_utf8(&output.stdout) {
+    /* let output_parsed = match str::from_utf8(&output.stdout) {
         Ok(v) => v.to_owned(),
         Err(e) => format!("Invalid UTF-8 sequence: {}", e),
     };
 
-    Json(output_parsed)
+    Json(output_parsed) */
+    Json("".to_string())
 }
 
 

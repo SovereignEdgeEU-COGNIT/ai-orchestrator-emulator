@@ -8,11 +8,11 @@ use crate::ctrl_plane_client::Host;
 
 const APP_PATH: &str = "/run_dummy";
 
-async fn exec_app(host_url: String, cmd_args: Arc<Vec<&str>>) -> Result<(), Box<dyn std::error::Error>>  {
+async fn exec_app(host_url: String, cmd_args: &String) -> Result<(), Box<dyn std::error::Error>>  {
 
     let client = reqwest::Client::new();
     let res = client.post(host_url)
-    .json(&*cmd_args)
+    .json(cmd_args)
     .send()
     .await?;
 
@@ -21,29 +21,30 @@ async fn exec_app(host_url: String, cmd_args: Arc<Vec<&str>>) -> Result<(), Box<
     Ok(())
 }
 
-pub async fn emulate_client(hosts_shared: Arc<Mutex<Vec<Host>>>) {
-    loop {
-        send_client_requests(Arc::clone(&hosts_shared)).await;
+use crate::ctrl_plane_client::{Job, JobDescription};
+pub fn emulate_client(job_info: Job) {
 
-        time::sleep(Duration::from_secs(5)).await;
-    }
+    tokio::spawn(async move {
+        loop {
+            send_client_requests(&job_info).await;
+    
+            time::sleep(Duration::from_secs(job_info.job_description.repeat_rate)).await;
+        }
+    });
+    
 }
 
-async fn send_client_requests(hosts_shared: Arc<Mutex<Vec<Host>>>) {
+async fn send_client_requests(job_info: &Job) {
     //let mut set = tokio::task::JoinSet::new();
 
-    let cmd_args = Arc::new(vec!["/C", "echo hello"]);
+    //let cmd_args = Arc::new(vec!["/C", "echo hello"]);
+    let host = &job_info.host;
 
     // Extract the host url and hold the lock minimal time
-    let host_urls: Vec<String> = {
-        let hosts = hosts_shared.lock().unwrap();
-        hosts.iter().map(|host| {
-            format!("http://{}:{}{}", host.get_ip(), host.get_port(), APP_PATH)
-        }).collect()
-    };
+    let host_url = format!("http://{}:{}{}", host.get_ip(), host.get_port(), APP_PATH);
 
-
-    let mut futures = vec![];
+    exec_app(host_url, &job_info.job_description.args).await;
+    /* let mut futures = vec![];
 
     for host_url in host_urls {
         let shared_vec_clone = Arc::clone(&cmd_args);
@@ -52,9 +53,9 @@ async fn send_client_requests(hosts_shared: Arc<Mutex<Vec<Host>>>) {
             exec_app(host_url, shared_vec_clone).await;
         });
         futures.push(future);
-    }
+    } */
 
-    let _results = future::join_all(futures).await;
+    //let _results = future::join_all(futures).await;
 
     
 }
