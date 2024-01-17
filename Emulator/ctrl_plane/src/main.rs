@@ -1,13 +1,17 @@
 #[macro_use] extern crate rocket;
 
 use rocket::fs::NamedFile;
+use rocket::futures::SinkExt;
 use rocket::serde::{json::Json, Serialize, Deserialize};
 use rocket::State;
 use std::iter::Zip;
 use std::path::{Path, PathBuf};
-use std::fs;
+use std::{fs, thread};
 use std::sync::Mutex;
 use sha2::{Sha256, Digest};
+use rocket_ws::{WebSocket, Channel};
+use std::sync::mpsc::{self, Receiver, Sender};
+use tokio::runtime::Runtime;
 
 #[derive(Serialize)]
 struct FileInfo {
@@ -20,6 +24,12 @@ struct Host {
     ip: String,
     name: String,
     port: u16
+}
+
+#[derive(Serialize, Deserialize)]
+struct FlavorMapping {
+    host: Host,
+    flavors: Vec<String>
 }
 
 
@@ -86,12 +96,6 @@ fn get_hosts(hosts_shared: &State<Mutex<Vec<Host>>>) -> Json<Vec<Host>> {
     Json(hosts.iter().cloned().collect())
 }
 
-#[derive(Serialize, Deserialize)]
-struct FlavorMapping {
-    host: Host,
-    flavors: Vec<String>
-}
-
 #[get("/hosts/flavor")]
 fn get_host_flavors(hosts_shared: &State<Mutex<Vec<Host>>>, flavor_map_shared: &State<Mutex<Vec<Vec<String>>>>) -> Json<Vec<FlavorMapping>> {
     let mut hosts = hosts_shared.lock().unwrap();
@@ -104,15 +108,87 @@ fn get_host_flavors(hosts_shared: &State<Mutex<Vec<Host>>>, flavor_map_shared: &
 }
 
 #[post("/start", format = "json", data = "<job_info>")]
-fn start_job(job_info: Json<FlavorMapping>, hosts_shared: &State<Mutex<Vec<Host>>>, flavor_map_shared: &State<Mutex<Vec<Vec<String>>>>) {
+fn start_job(
+        job_info: Json<FlavorMapping>, 
+        hosts_shared: &State<Mutex<Vec<Host>>>, 
+        flavor_map_shared: &State<Mutex<Vec<Vec<String>>>>,
+        client_emulator: &State<Mutex<Option<WebSocketConnection>>>
+    ) {
     let mut hosts = hosts_shared.lock().unwrap();
     let mut flavor_map = flavor_map_shared.lock().unwrap();
     //flavor_map.push(Vec::new());
     hosts.iter_mut()
         .zip(flavor_map.iter_mut())
         .filter(|(host, flavors)| host.name == job_info.host.name)
-        .for_each(|(host, flavors)| flavors.append(&mut job_info.flavors.clone()))
+        .for_each(|(host, flavors)| flavors.append(&mut job_info.flavors.clone()));
+    let cem = client_emulator.lock().unwrap();
+    
+    if let Some(cem) = &*cem {
+        cem.send(job_info.0);
+    }
 }
+
+/**
+ * A websocket where an client emulator connects.
+ * When a new start_job() is received it forwards the host-flavor info to the client
+ * that will start to emulate clients sending that flavor of requests to the host.
+ */
+
+//use rocket::{get, launch, post, routes};
+
+
+// ... [rest of your existing code, like struct definitions] ...
+
+// Define a struct to hold WebSocket connections
+struct WebSocketConnection {
+    tx: mpsc::Sender<FlavorMapping>
+}
+
+impl WebSocketConnection {
+
+    fn new(ws: WebSocket) -> (WebSocketConnection, Channel<'static>) {
+        let (tx, rx): (Sender<FlavorMapping>, Receiver<FlavorMapping>) = mpsc::channel();
+
+        let channel = ws.channel(move |mut ws_stream| Box::pin(async move {
+        
+            tokio::spawn(async move {
+                loop {
+                    if let Ok(job_info) = rx.recv() {
+                        let job_info_str = serde_json::to_string(&job_info).unwrap();
+                        println!("sending {}", job_info_str);
+                        ws_stream.send(rocket_ws::Message::Text(job_info_str)).await.expect("client conn failed");
+                    }
+                }
+            });
+            Ok(())
+            //let message = format!("Hello, {}!", name);
+            //let _ = ws_stream.send(message.into()).await;
+        }));
+
+        (WebSocketConnection{tx: tx}, channel)
+    }
+
+    fn send(&self, job_info: FlavorMapping) {
+        let _ = self.tx.send(job_info);
+    }
+}
+
+
+#[get("/websocket")]
+fn websocket(ws: WebSocket, client_emulator: &State<Mutex<Option<WebSocketConnection>>>) -> Channel<'static> {
+    let mut client_emulator = client_emulator.lock().unwrap();
+    let (new_client_emulator, channel) = WebSocketConnection::new(ws);
+    *client_emulator = Some(new_client_emulator);
+
+    channel
+}
+
+
+/* #[post("/start", format = "json", data = "<job_info>")]
+async fn start_job(job_info: Json<FlavorMapping>, connections: &State<Connections>) {
+    let job_info_str = serde_json::to_string(&*job_info).unwrap();
+    connections.ws_set.broadcast_text(&job_info_str).await;
+} */
 
 /**
  * Function to calculate the SHA-256 hash of a file.
@@ -137,10 +213,13 @@ fn rocket() -> _ {
     let hosts = Vec::<Host>::new();
     let hosts_shared = Mutex::new(hosts);
 
+    let connections: Mutex<Option<WebSocketConnection>> = Mutex::new(None);
+
     let flavor_map = Vec::<Vec::<String>>::new();
     let flavor_map_shared = Mutex::new(flavor_map);
     rocket::build()
-        .mount("/", routes![index, list_files, files, register_host, get_hosts, get_host_flavors])
+        .mount("/", routes![index, list_files, files, register_host, get_hosts, get_host_flavors, websocket, start_job])
         .manage(hosts_shared)
         .manage(flavor_map_shared)
+        .manage(connections)
 }

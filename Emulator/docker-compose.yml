@@ -9,6 +9,8 @@ services:
       - infranet
     depends_on:
       - ctrl_plane
+    env_file:
+      - .env
   
   ctrl_plane:
     build: ./ctrl_plane
@@ -16,6 +18,18 @@ services:
       - "8000:8000"
     networks:
       - infranet
+    env_file:
+      - .env
+
+  emulated_client:
+    build: ./emulated_client
+    networks:
+      - infranet
+    depends_on:
+      - ctrl_plane
+      - emulated_host
+    env_file:
+      - .env
 
 
   prometheus:
