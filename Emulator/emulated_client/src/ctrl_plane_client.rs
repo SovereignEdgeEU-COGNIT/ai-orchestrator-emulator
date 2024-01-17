@@ -13,6 +13,7 @@ use crate::file_cache::{Cache, FileInfo};
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Host {
     ip: String,
+    name: String,
     port: u16
 }
 

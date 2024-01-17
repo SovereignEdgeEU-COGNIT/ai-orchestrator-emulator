@@ -4,13 +4,15 @@ use reqwest;
 use rocket::Config;
 use local_ip_address::local_ip;
 use local_ip_address::list_afinet_netifas;
+use rocket::serde::{json::Json, Serialize};
 use tokio::time;
 use std::{fs, io::Write, path::Path, time::Duration};
+use gethostname::gethostname;
 
 use crate::file_cache::{Cache, FileInfo};
 
-const FILES_URL: &str = "http://localhost:8000/files";
-const SERVER_URL: &str = "http://localhost:8000";
+const FILES_URL: &str = "http://ctrl_plane:8000/files";
+const SERVER_URL: &str = "http://ctrl_plane:8000";
 pub const FOLDER_NAME: &str = "./local_cache";
 
 pub async fn subscribe(mut cache: Cache) {
@@ -55,6 +57,12 @@ async fn download_file(cache: &mut Cache, file_info: FileInfo ) -> Result<(), Bo
     Ok(())
 }
 
+#[derive(Debug, Serialize, Clone)]
+struct Host {
+    ip: String,
+    name: String,
+    port: u16
+}
 
 pub async fn register_host() -> Result<Config, Box<dyn std::error::Error>> {
     /*let network_interfaces = list_afinet_netifas();
@@ -68,11 +76,13 @@ pub async fn register_host() -> Result<Config, Box<dyn std::error::Error>> {
     }*/
 
     let my_local_ip = local_ip().unwrap();
+    //println!("Hostname: {:?}", gethostname());
+    let host = Host{ip: my_local_ip.to_string(), name: gethostname(), port: 0};
 
     let client = reqwest::Client::new();
     let url = format!("{}/register", SERVER_URL);
     let res = client.post(url)
-    .json(&my_local_ip.to_string())
+    .json(&host)
     .send()
     .await?;
 
