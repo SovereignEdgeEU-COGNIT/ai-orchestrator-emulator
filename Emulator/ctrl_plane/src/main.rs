@@ -1,8 +1,9 @@
 #[macro_use] extern crate rocket;
 
 use rocket::fs::NamedFile;
-use rocket::serde::{json::Json, Serialize};
+use rocket::serde::{json::Json, Serialize, Deserialize};
 use rocket::State;
+use std::iter::Zip;
 use std::path::{Path, PathBuf};
 use std::fs;
 use std::sync::Mutex;
@@ -14,11 +15,13 @@ struct FileInfo {
     hash: String,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct Host {
     ip: String,
+    name: String,
     port: u16
 }
+
 
 #[get("/")]
 fn index() -> &'static str {
@@ -64,12 +67,15 @@ fn list_files() -> Json<Vec<FileInfo>> {
  * # Returns
  * The port number assigned to the new host.
  */
-#[post("/register", format = "json", data = "<node_ip>")]
-fn register_host(node_ip: Json<String>, hosts_shared: &State<Mutex<Vec<Host>>>) -> Json<u16> {
+#[post("/register", format = "json", data = "<node_info>")]
+fn register_host(node_info: Json<Host>, hosts_shared: &State<Mutex<Vec<Host>>>, flavor_map_shared: &State<Mutex<Vec<Vec<String>>>>) -> Json<u16> {
     let mut hosts = hosts_shared.lock().unwrap();
-    let last_alloc_port = hosts.last().unwrap_or(&Host{ip: String::new(), port:1233}).port;
-    let host = Host{ip: node_ip.0, port: last_alloc_port + 1};
+    let mut flavor_map = flavor_map_shared.lock().unwrap();
+    let last_alloc_port = hosts.last().unwrap_or(&Host{ip: String::new(), name:String::new(), port:1233}).port;
+    let mut host = node_info.0.clone();
+    host.port = last_alloc_port + 1;
     hosts.push(host);
+    flavor_map.push(Vec::new());
     hosts.iter().for_each(|x| println!("{:?}", x));
     Json(last_alloc_port + 1)
 }
@@ -78,6 +84,34 @@ fn register_host(node_ip: Json<String>, hosts_shared: &State<Mutex<Vec<Host>>>) 
 fn get_hosts(hosts_shared: &State<Mutex<Vec<Host>>>) -> Json<Vec<Host>> {
     let hosts = hosts_shared.lock().unwrap();
     Json(hosts.iter().cloned().collect())
+}
+
+#[derive(Serialize, Deserialize)]
+struct FlavorMapping {
+    host: Host,
+    flavors: Vec<String>
+}
+
+#[get("/hosts/flavor")]
+fn get_host_flavors(hosts_shared: &State<Mutex<Vec<Host>>>, flavor_map_shared: &State<Mutex<Vec<Vec<String>>>>) -> Json<Vec<FlavorMapping>> {
+    let mut hosts = hosts_shared.lock().unwrap();
+    let mut flavor_map = flavor_map_shared.lock().unwrap();
+    let flavorMappings = hosts.iter()
+        .zip(flavor_map.iter())
+        .map(|(h, f)| FlavorMapping{host: h.clone(), flavors: f.clone()})
+        .collect();
+    Json(flavorMappings)
+}
+
+#[post("/start", format = "json", data = "<job_info>")]
+fn start_job(job_info: Json<FlavorMapping>, hosts_shared: &State<Mutex<Vec<Host>>>, flavor_map_shared: &State<Mutex<Vec<Vec<String>>>>) {
+    let mut hosts = hosts_shared.lock().unwrap();
+    let mut flavor_map = flavor_map_shared.lock().unwrap();
+    //flavor_map.push(Vec::new());
+    hosts.iter_mut()
+        .zip(flavor_map.iter_mut())
+        .filter(|(host, flavors)| host.name == job_info.host.name)
+        .for_each(|(host, flavors)| flavors.append(&mut job_info.flavors.clone()))
 }
 
 /**
@@ -102,7 +136,11 @@ fn rocket() -> _ {
     
     let hosts = Vec::<Host>::new();
     let hosts_shared = Mutex::new(hosts);
+
+    let flavor_map = Vec::<Vec::<String>>::new();
+    let flavor_map_shared = Mutex::new(flavor_map);
     rocket::build()
-        .mount("/", routes![index, list_files, files, register_host, get_hosts])
+        .mount("/", routes![index, list_files, files, register_host, get_hosts, get_host_flavors])
         .manage(hosts_shared)
+        .manage(flavor_map_shared)
 }
