@@ -1,0 +1,63 @@
+version: '3'
+
+services:
+  emulated_host:
+    build: ./emulated_host
+    ports:
+      - "1234-1345:1234-1345"
+    networks:
+      - infranet
+    depends_on:
+      - ctrl_plane
+    env_file:
+      - .env
+  
+  ctrl_plane:
+    build: ./ctrl_plane
+    ports: 
+      - "8000:8000"
+    networks:
+      - infranet
+    env_file:
+      - .env
+
+  emulated_client:
+    build: ./emulated_client
+    networks:
+      - infranet
+    depends_on:
+      - ctrl_plane
+      - emulated_host
+    env_file:
+      - .env
+
+
+  prometheus:
+    build: ./monitor/Prometheus
+    volumes:
+      - ./monitor/Prometheus:/etc/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - monitornet
+    depends_on:
+      - emulated_host
+      - ctrl_plane
+      - cadvisor
+
+  cadvisor:
+    build: ./monitor/cAdvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "8080:8080"
+    networks:
+      - monitornet
+
+networks:
+  infranet:
+  monitornet:

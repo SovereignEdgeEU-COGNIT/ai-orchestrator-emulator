@@ -1,0 +1,75 @@
+#! Warning: Linux version is untested
+- name: Set Up Docker on Linux Hosts
+  hosts: linux-infra
+  vars:
+    dockerfile_src: ./Dockerfile
+    dockerfile_dest: /tmp/ansible/docker
+    image_name: cognit_host_sim
+    container_name: cognit_host_sim
+  tasks:
+#     - name: Create tmp storage
+#       command: mkdir {{ dockerfile_dest }}
+#       ignore_errors: true # ? Needed?
+#     - name: Copy Dockerfile to remote Linux host
+#       copy:
+#         src: "{{ dockerfile_src }}"
+#         dest: "{{ dockerfile_dest }}"
+#     - name: Build Docker image on Linux host
+#       command: docker build -t {{ image_name }} {{ dockerfile_dest }}
+    - name: Build Docker image on Windows host
+      community.docker.docker_image: 
+        build:
+          dockerfile: "{{ dockerfile_src }}"
+          source: build
+    - name: Run Docker container on Linux host
+      docker_container:
+        name: "{{ container_name }}"
+        image: "{{ image_name }}"
+        state: started
+
+- name: Set Up Docker on Windows Hosts
+  hosts: win-infra
+  vars:
+    dockerfile_src: ./Dockerfile
+    dockerfile_dest: C:\tmp\ansible\docker
+    image_name: cognit_host_sim
+    container_name: cognit_host_sim
+  tasks:
+    # - name: Create tmp storage
+    #   win_shell: if not exist {{ dockerfile_dest }}\NUL mkdir {{ dockerfile_dest }} else return 0
+    #   ignore_errors: true
+    # - name: Copy Dockerfile to remote Windows host
+    #   copy:
+    #     src: "{{ dockerfile_src }}"
+    #     dest: "{{ dockerfile_dest }}"
+    - name: Build Docker image on Windows host
+      community.docker.docker_image: 
+        build:
+          dockerfile: "{{ dockerfile_src }}"
+          source: build
+      #win_shell: docker build -t {{ image_name }} {{ dockerfile_dest }}
+    - name: Run Docker container on Windows host
+      docker_container:
+        name: "{{ container_name }}"
+        image: "{{ image_name }}"
+        state: started
+
+# - name: Copy Dockerfile and Build Docker Image
+#   hosts: linux
+#   tasks:
+#     - name: Copy Dockerfile to remote host
+#       copy:
+#         src: /path/to/Dockerfile
+#         dest: /remote/path/Dockerfile
+
+#     - name: Build Docker image
+#       command: docker build -t my_custom_image /remote/path/
+
+# - name: Run Docker Container
+#   hosts: linux
+#   tasks:
+#     - name: Ensure custom Docker container is running
+#       docker_container:
+#         name: my_custom_container
+#         image: my_custom_image
+#         state: started
