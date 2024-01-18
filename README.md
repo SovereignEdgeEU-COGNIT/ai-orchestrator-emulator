@@ -12,4 +12,5 @@ https://tcconfig.readthedocs.io/en/latest/pages/usage/tcset/index.html#:~:text=S
 4.1.4.2. Set traffic control within a docker container
 You need to run a container with --cap-add NET_ADMIN option if you you would like to set a tc rule within a container:
 
+
 docker run -d --cap-add NET_ADMIN -t <docker image>
