@@ -1,12 +1,14 @@
 version: '3'
 
 services:
-  emulated_host:
-    build: ./emulated_host
+  emulated_sr:
+    build: ./emulated_sr
     ports:
       - "1234-1345:1234-1345"
     networks:
       - infranet
+    hostname: emulated_sr
+    container_name: emulated_sr
     depends_on:
       - ctrl_plane
     env_file:
@@ -16,18 +18,22 @@ services:
     build: ./ctrl_plane
     ports: 
       - "8000:8000"
+    hostname: ctrl_plane
+    container_name: ctrl_plane
     networks:
       - infranet
     env_file:
       - .env
 
-  emulated_client:
-    build: ./emulated_client
+  client_emulator:
+    build: ./client_emulator
     networks:
       - infranet
     depends_on:
       - ctrl_plane
-      - emulated_host
+      - emulated_sr
+    hostname: client_emulator
+    container_name: client_emulator
     env_file:
       - .env
 
@@ -41,7 +47,7 @@ services:
     networks:
       - monitornet
     depends_on:
-      - emulated_host
+      - emulated_sr
       - ctrl_plane
       - cadvisor
 
