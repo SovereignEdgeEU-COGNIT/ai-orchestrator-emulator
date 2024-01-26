@@ -40,6 +40,7 @@ else
 fi
 
 # Compile and run the host_agent
+source .env
 cd host_agent
 go build cmd/main.go
 ./main

@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -23,11 +24,11 @@ type DockerContainerConfig struct {
 }
 
 type DockerConfig struct {
-	ctrlPlaneAddr  string
-	ctrlPlanePort  string
+	CtrlPlaneAddr  string
+	CtrlPlanePort  string
 	startPort      uint16
 	allocatedPorts map[uint16]bool
-	hostInfo       util.Host
+	HostInfo       util.Host
 	contIDNameMap  map[string]string
 	portMutex      sync.Mutex
 	imageName      string
@@ -40,11 +41,11 @@ type DockerConfig struct {
 // Initialize the Docker config with default values
 func NewDockerConfig(host util.Host, imageName string) *DockerConfig {
 	config := &DockerConfig{
-		ctrlPlaneAddr:  os.Getenv("CTRL_PLANE_ADDR"),
-		ctrlPlanePort:  os.Getenv("CTRL_PLANE_PORT"),
+		CtrlPlaneAddr:  os.Getenv("CTRL_PLANE_ADDR"),
+		CtrlPlanePort:  os.Getenv("CTRL_PLANE_PORT"),
 		startPort:      1024,
 		allocatedPorts: make(map[uint16]bool),
-		hostInfo:       host,
+		HostInfo:       host,
 		contIDNameMap:  make(map[string]string),
 		portMutex:      sync.Mutex{},
 		imageName:      imageName,
@@ -54,7 +55,7 @@ func NewDockerConfig(host util.Host, imageName string) *DockerConfig {
 		monitoring:     "",
 	}
 
-	if config.ctrlPlaneAddr == "" || config.ctrlPlanePort == "" {
+	if config.CtrlPlaneAddr == "" || config.CtrlPlanePort == "" {
 		log.Fatal("CTRL_PLANE_ADDR and CTRL_PLANE_PORT environment variables must be set")
 	}
 
@@ -64,7 +65,7 @@ func NewDockerConfig(host util.Host, imageName string) *DockerConfig {
 	}
 	log.Default().Println("Images built successfully")
 
-	if config.hostInfo.LocalIP == config.ctrlPlaneAddr {
+	if config.HostInfo.LocalIP == config.CtrlPlaneAddr {
 		log.Default().Println("Starting Prometheus...")
 		if output, err := config.startPrometheus(); err != nil {
 			config.StopAllContainers()
@@ -132,7 +133,13 @@ func (dc *DockerConfig) allocatePort() uint16 {
 }
 
 func startContainer(cmdArgs []string) (string, error) {
+
+	//print the command to be executed
+	log.Default().Println("Executing command: ", "docker", cmdArgs)
+
 	cmd := exec.Command("docker", cmdArgs...)
+	//print the args to make sure they are in the right order
+	log.Default().Println("Command args: ", cmd.Args)
 	var outb, errb bytes.Buffer
 	cmd.Stdout = &outb
 	cmd.Stderr = &errb
@@ -141,8 +148,8 @@ func startContainer(cmdArgs []string) (string, error) {
 	if err != nil {
 		return errb.String(), err
 	} else {
-		containerID := strings.TrimSpace(outb.String())
-		return containerID, nil
+		//containerID := strings.TrimSpace(outb.String())
+		return outb.String(), nil
 	}
 }
 
@@ -168,21 +175,78 @@ func (dc *DockerConfig) StartContainer(cpu float32, memory int) (string, string,
 	}
 
 	containerPort := hostPort
-	envVars := fmt.Sprintf("-e CTRL_PLANE_ADDR=%s -e CTRL_PLANE_PORT=%s -e HOST_IP=%s -e HOST_PORT=%d", dc.ctrlPlaneAddr, dc.ctrlPlanePort, dc.hostInfo.LocalIP, hostPort)
-	containerName := fmt.Sprintf("%s_%s_%d", dc.hostInfo.Hostname, "emu_sr", len(dc.contIDNameMap))
 
-	cmdArgs := []string{"start", "-d", "--name", containerName, "--hostname", containerName}
+	//envVars := fmt.Sprintf("-e CTRL_PLANE_ADDR=\"%s\" -e CTRL_PLANE_PORT=\"%s\" -e HOST_IP=\"%s\" -e HOST_PORT=\"%d\"", dc.CtrlPlaneAddr, dc.CtrlPlanePort, dc.HostInfo.LocalIP, hostPort)
+	//envVars but as arrays of "-e" and "key=value" pairs with values formated using the dc struct
+	envVars := []string{"-e", "CTRL_PLANE_ADDR=" + dc.CtrlPlaneAddr, "-e", "CTRL_PLANE_PORT=" + dc.CtrlPlanePort, "-e", "HOST_IP=" + dc.HostInfo.LocalIP, "-e", "HOST_PORT=" + strconv.Itoa(int(hostPort))}
+	containerName := fmt.Sprintf("%s_%s_%d", dc.HostInfo.Hostname, "emu_sr", len(dc.contIDNameMap))
+
+	cmdArgs := []string{"run", "--detach=true", "--name", containerName, "--hostname", containerName}
 	if cpu > 0 {
 		cmdArgs = append(cmdArgs, "--cpus", fmt.Sprintf("%.2f", cpu))
 	}
 	if memory > 0 {
 		cmdArgs = append(cmdArgs, "--memory", fmt.Sprintf("%dm", memory))
 	}
-	cmdArgs = append(cmdArgs, "-p", fmt.Sprintf("%d:%d", hostPort, containerPort), envVars, dc.imageName)
+	cmdArgs = append(cmdArgs, "-p", fmt.Sprintf("%d:%d", hostPort, containerPort))
+	cmdArgs = append(cmdArgs, envVars...)
+	cmdArgs = append(cmdArgs, dc.imageName)
 
-	containerID, err := startContainer(cmdArgs)
-	dc.contIDNameMap[containerID] = containerName
-	return containerID, containerName, err
+	output, err := startContainer(cmdArgs)
+
+	//output, err := dc.startSrContainer(cpu, memory, hostPort)
+
+	if err != nil {
+		fmt.Println("Error starting container: ", err.Error(), " output: ", output)
+		return "", "", err
+	} else {
+		containerID := strings.TrimSpace(output)
+		fmt.Println("Container started successfully, ID: ", containerID)
+		dc.contIDNameMap[containerID] = containerName
+		return containerID, containerName, err
+	}
+}
+
+func (dc *DockerConfig) startSrContainer(cpu float32, memory int, hostPort uint16) (string, error) {
+	/* envArgs := []string{"run",
+	"--detach=true",
+	"--name",
+	"test_name_1",
+	"--hostname",
+	"test_name_1",
+	"--cpus", "0.5",
+	"--memory", "512m",
+	"-p", "1236:1236",
+	"-e", "CTRL_PLANE_ADDR=194.28.122.122",
+	"-e", "CTRL_PLANE_PORT=8000",
+	"-e", "HOST_IP=194.28.122.122",
+	"-e", "HOST_PORT=1236",
+	"emulator-emulated_sr"} */
+
+	envVars := []string{
+		"-e", "CTRL_PLANE_ADDR=194.28.122.122",
+		"-e", "CTRL_PLANE_PORT=8000",
+		"-e", "HOST_IP=194.28.122.122",
+		"-e", "HOST_PORT=1236",
+	}
+
+	containerName := fmt.Sprintf("%s_%s_%d", dc.HostInfo.Hostname, "emu_sr", len(dc.contIDNameMap))
+
+	cmdArgs := []string{"run", "--detach=true", "--name", containerName, "--hostname", containerName}
+	if cpu > 0 {
+		cmdArgs = append(cmdArgs, "--cpus", fmt.Sprintf("%.2f", cpu))
+	}
+	if memory > 0 {
+		cmdArgs = append(cmdArgs, "--memory", fmt.Sprintf("%dm", memory))
+	}
+	containerPort := hostPort
+	cmdArgs = append(cmdArgs, "-p", fmt.Sprintf("%d:%d", hostPort, containerPort))
+	//add envVars to cmdArgs
+	cmdArgs = append(cmdArgs, envVars...)
+	cmdArgs = append(cmdArgs, dc.imageName)
+
+	return startContainer(cmdArgs)
+
 }
 
 func (dc *DockerConfig) startMonitoringContainer() (string, error) {
@@ -245,7 +309,7 @@ func (dc *DockerConfig) startClientEmulator() (string, error) {
 		"--name=client_emulator",
 		"--hostname=client_emulator",
 		"--env-file=../.env",
-		"--rm",
+		//"--rm",
 		"emulator-client_emulator"}
 
 	return startContainer(cmdArgs)

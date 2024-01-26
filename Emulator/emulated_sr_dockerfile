@@ -9,14 +9,19 @@ RUN apt-get update && apt-get install -y \
 
 # Copy your Rust project into the container
 WORKDIR /usr/src/myapp
-COPY . .
+COPY ./emulated_sr ./emulated_sr
+COPY ./ctrl_plane ./ctrl_plane
 
 # Build your Rust application
-RUN cargo install --path .
+RUN cargo install --path ./emulated_sr
+
+RUN rm -rf ./emulated_sr/target
+
+RUN chmod +x ./emulated_sr/start_function.sh
 
 # Expose necessary ports (adjust if your application uses different ports)
 # Expose port for your Rust application
 EXPOSE 8000
 
 # Add a command to run your application
-CMD ["./target/release/emulated_host"]
+CMD ["emulated_sr"]

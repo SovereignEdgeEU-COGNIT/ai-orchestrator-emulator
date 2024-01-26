@@ -30,9 +30,15 @@ pub async fn subscribe_jobs(job_types: Vec<JobDescription>, callback: fn(Job)) {
        println!("Recieved: {}", message);
        let sr_info = serde_json::from_str::<SRInfo>(&message.to_string()).expect("Incorrect parsing of FlavorMapping");
 
-       let job_desc = job_types.iter().find(|job_desc| job_desc.name == *sr_info.get_flavor()).expect("Invalid job sent");
-       let job = Job{host: sr_info.clone(), job_description: job_desc.clone()};
-       callback(job);
+       match job_types.iter().find(|job_desc| job_desc.name == *sr_info.get_flavor()) {
+            Some(job_desc) => {
+                let job = Job{host: sr_info.clone(), job_description: job_desc.clone()};
+                callback(job);
+            },
+            None => {
+                println!("No job found for flavor: {}", sr_info.get_flavor());
+            }
+       }
        //"asd".to_string().
    
    }

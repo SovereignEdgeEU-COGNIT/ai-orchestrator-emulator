@@ -1,0 +1,15 @@
+# Use an official Rust image as the base
+FROM rust:latest
+
+# Copy your Rust project into the container
+WORKDIR /usr/src/myapp
+COPY ./client_emulator ./client_emulator
+COPY ./ctrl_plane ./ctrl_plane
+
+# Build your Rust application
+RUN cargo install --path ./client_emulator
+
+RUN rm -rf ./client_emulator/target
+
+# Add a command to run your application
+CMD ["client_emulator"]

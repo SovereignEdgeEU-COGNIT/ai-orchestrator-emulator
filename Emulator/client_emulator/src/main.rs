@@ -12,8 +12,8 @@ async fn main() {
     
     let mut file_cache = file_client::FileClient::new();
 
-    let cpu_job = JobDescription{name: "cpu".to_string(), repeat_rate: 25, repeat_times: 5, args: " --class cpu --all 1 -t 14s".to_string()};
-   let disk_job = JobDescription{name: "disk".to_string(), repeat_rate: 25, repeat_times: 5, args: " --class io --all 1 -t 14s".to_string()};
+    let cpu_job = JobDescription{name: "cpu".to_string(), repeat_rate: 25, repeat_times: 5, args: " --all=1 --class=cpu  -t 14s".to_string()};
+   let disk_job = JobDescription{name: "disk".to_string(), repeat_rate: 25, repeat_times: 5, args: "  --all=1 --class=io -t 14s".to_string()};
 
    let job_descriptions = vec![cpu_job, disk_job];
     

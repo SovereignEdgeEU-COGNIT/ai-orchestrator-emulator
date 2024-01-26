@@ -77,7 +77,8 @@ impl Registry {
  * # Returns
  * The port number assigned to the new host.
  */
-#[post("/register/host", format = "json", data = "<node>")]
+// curl 194.28.122.122:8000/register/host -X POST -H "Content-Type: application/json" -d '{"ip": "
+#[post("/register", format = "json", data = "<node>")]
 fn register_node(node: Json<NodeType>, registry: &State<Registry>) {
     
     match node.0 {
@@ -90,6 +91,7 @@ fn register_node(node: Json<NodeType>, registry: &State<Registry>) {
     }
 }
 
+//curl 194.28.122.122:8000/list?node_type=host
 #[get("/list?<node_type>")]
 fn list(node_type: String, registry: &State<Registry>) -> Json<Vec<NodeType>> {
 

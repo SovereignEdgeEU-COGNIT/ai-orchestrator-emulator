@@ -4,9 +4,26 @@
 chmod +x ./install_for_host.sh
 ./install_for_host.sh
 
-## Start 
+## Endpoints
+curl 194.28.122.122:8000/list?node_type=host
+curl 194.28.122.122:8000/list?node_type=sr
+curl 194.28.122.122:8000/register/host -X POST -H "Content-Type: application/json" -d '{"ip": "", "name": "", "port": ""}'
+curl http://194.28.122.122:8000/start -X POST -H "Content-Type: application/json" -d '{"host_info": {"ip":"194.28.122.122","name":"Cognit-test","port":8001}, "flavor": "cpu", "sr_env": {"cpu": 1.0, "mem": 1024}}'
+
+ docker run -it --name Cognit-test_emu_sr_2 --hostname Cognit-test_emu_sr_2 --cpus 1.00 --memory 1024m -p 1024:1024 -e CTRL_PLANE_ADDR=194.28.122.122 -e CTRL_PLANE_PORT=8000 -e HOST_IP=194.28.122.122 -e HOST_PORT=1024 emulator-emulated_sr /bin/bash
+ 
+docker kill Cognit-test_emu_sr_100
+docker rm Cognit-test_emu_sr_100
+docker run --detach=true --name Cognit-test_emu_sr_100 --hostname Cognit-test_emu_sr_100 --cpus 1.00 --memory 1024m -p 1025:1025 -e CTRL_PLANE_ADDR=194.28.122.122 -e CTRL_PLANE_PORT=8000 -e HOST_IP="194.28.122.122" -e HOST_PORT="1025" emulator-emulated_sr
 
 
+curl http://$CTRL_PLANE_ADDR:$CTRL_PLANE_PORT/register/host -X POST -H "Content-Type: application/json" -d '{"Host": {"ip": "194.28.122.122", "name": "tired-simon", "port": '$HOST_AGENT_PORT'}}'
+
+## Docker
+
+docker system prune
+docker build -f path_to_dockerfile -t docker_image_name .
+docker run -it image_id/image_name /bin/bash
 
 # Old description:
 Caveats

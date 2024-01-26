@@ -6,11 +6,13 @@ WORKDIR /usr/src/myapp
 COPY . .
 
 # Build your Rust application
-RUN cargo install --path .
+RUN cargo install --path ./ctrl_plane_server
+
+RUN rm -rf ./target
 
 # Expose necessary ports (adjust if your application uses different ports)
 # Expose port for your Rust application
 EXPOSE 8000
 
 # Add a command to run your application
-CMD ["./target/release/ctrl_plane"]
+CMD ["server"]

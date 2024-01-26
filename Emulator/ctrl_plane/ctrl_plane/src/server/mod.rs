@@ -31,7 +31,8 @@ fn index() -> &'static str {
     "Hello, this is the server!"
 }
 
-pub fn rocket() {
+#[rocket::main]
+pub async fn rocket() {
     
     /* let nodes = Vec::<NodeInfo>::new();
     let hosts_shared = Mutex::new(hosts);
@@ -46,7 +47,7 @@ pub fn rocket() {
     rocket = registry_server::initiate(rocket, faas_server.clone());
     rocket = faas_server::initiate(rocket, faas_server.clone());
     rocket = file_server::initiate(rocket);
-    rocket.launch();
+    rocket.launch().await;
         /*.mount("/", routes![index, list_files, files, register_host, get_hosts, get_host_flavors, websocket, start_job])
         .manage(hosts_shared)
         .manage(flavor_map_shared)

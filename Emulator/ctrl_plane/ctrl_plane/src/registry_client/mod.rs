@@ -2,7 +2,7 @@
 //use local_ip_address::local_ip;
 //use local_ip_address::list_afinet_netifas;
 use gethostname::gethostname;
-use rocket::http::uri::Host;
+use rocket::{http::uri::Host, serde::json};
 use std::env;
 use serde::{Serialize, Deserialize};
 
@@ -111,6 +111,8 @@ pub async fn register_node(node: NodeType) -> Result<(), Box<dyn std::error::Err
 
     let client = reqwest::Client::new();
     let url = format!("http://{}/register", ctrl_plane_url());
+    println!("Registering node at {}", url);
+    println!("Node: {:?}", json::to_string(&node).unwrap());
     let res = client.post(url)
     .json(&node)
     .send()

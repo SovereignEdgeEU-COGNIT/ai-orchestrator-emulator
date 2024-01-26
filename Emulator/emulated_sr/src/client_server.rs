@@ -38,7 +38,7 @@ fn run_dummy_app(cmd_args: Json<String>) -> Json<String> {
             .output()
             .expect(&error_msg); //
     } else {
-        Command::new("./start_function.sh").arg(flags).spawn();
+        Command::new("./emulated_sr/start_function.sh").arg(flags).spawn();
     }
 
     /* let output_parsed = match str::from_utf8(&output.stdout) {
@@ -53,7 +53,7 @@ fn run_dummy_app(cmd_args: Json<String>) -> Json<String> {
 
 pub async fn serve(sr_info: SRInfo) -> Result<(), Box<dyn std::error::Error>> {
 
-    let ipv4 = sr_info.get_ip().parse::<std::net::Ipv4Addr>().unwrap();
+    let ipv4 = "0.0.0.0".parse::<std::net::Ipv4Addr>().unwrap();
     let ip = std::net::IpAddr::V4(ipv4);
 
     let config = Config {

@@ -2,7 +2,9 @@ version: '3'
 
 services:
   emulated_sr:
-    build: ./emulated_sr
+    build:
+      context: .
+      dockerfile: ./emulated_sr_dockerfile
     ports:
       - "1234-1345:1234-1345"
     networks:
@@ -26,7 +28,9 @@ services:
       - .env
 
   client_emulator:
-    build: ./client_emulator
+    build:
+      context: .
+      dockerfile: ./client_emulator_dockerfile
     networks:
       - infranet
     depends_on:

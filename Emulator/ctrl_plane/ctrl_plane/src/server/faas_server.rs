@@ -107,7 +107,7 @@ fn websocket(ws: WebSocket, server: &State<Arc<Mutex<FaaSServer>>>) -> Channel<'
     server.lock().unwrap().set_client(ws)
 }
 
-
+//curl 194.28.122.122:8000/start -X POST -H "Content-Type: application/json" -d '{"host_info": {"ip":"194.28.122.122","name":"Cognit-test","port":8001}, "flavor": "flavor1", "sr_env": {"cpu": 1.0, "mem": 1024}}'
 #[post("/start", format = "json", data = "<faas_req>")]
 async fn start_function(
         faas_req: Json<FaaSReq>, 

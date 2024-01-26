@@ -6,6 +6,7 @@
 mod tc_handler;
 mod client_server;
 
+
 //use ctrl_plane_client::FOLDER_NAME;
 use ctrl_plane::registry_client::{self, NodeInfo};
 use ctrl_plane::file_client;
@@ -23,6 +24,8 @@ async fn main() {
     match reg_res {
         Ok(_) => {
             file_client::listen_on_thread(listeners);
+            
+            println!("{:?}", sr_info);
             let client_server = client_server::serve(sr_info);
             let _ = client_server.await;
             ()
