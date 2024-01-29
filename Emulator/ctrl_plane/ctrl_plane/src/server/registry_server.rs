@@ -40,8 +40,8 @@ impl Registry {
         hosts.iter().for_each(|x| println!("{:?}", x));
     }
 
-    fn register_sr(&self, sr: SRInfo) {
-        self.faas_server.lock().unwrap().initiate_faas(sr.clone());
+    fn register_sr(&self, mut sr: SRInfo) {
+        sr = self.faas_server.lock().unwrap().initiate_faas(sr);
         let mut srs = self.srs.lock().unwrap();
 
         match srs.iter_mut().find(|existing_sr | existing_sr.get_name() == sr.get_name()) {

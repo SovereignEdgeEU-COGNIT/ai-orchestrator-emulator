@@ -65,11 +65,13 @@ impl FaaSServer {
         uninitiated_faas.insert(sr_name.clone(), faas_req);
     }
 
-    pub fn initiate_faas(&self, mut sr_info: SRInfo) {
+    pub fn initiate_faas(&self, mut sr_info: SRInfo) -> SRInfo {
         let mut uninitiated_faas = self.uninitiated_faas.lock().unwrap();
         let faas_req = uninitiated_faas.remove(sr_info.get_name()).unwrap(); // WARNING: This might cause panic if SR wasn't initiated by this server or if race condition occurs
         sr_info.set_flavor(faas_req.flavor);
-        self.send(sr_info);
+        sr_info.set_host_info(faas_req.host_info);
+        self.send(sr_info.clone());
+        sr_info
     }
 }
 

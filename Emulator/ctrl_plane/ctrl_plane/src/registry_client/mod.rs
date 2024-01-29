@@ -21,6 +21,7 @@ pub struct SRInfo {
     name: String,
     port: u16,
     flavor: String,
+    host_info: HostInfo,
 }
 
 
@@ -47,20 +48,28 @@ impl HostInfo {
         let name = gethostname().to_str().unwrap().to_string();
         HostInfo{ip, name, port}
     }
+
+    pub fn empty() -> HostInfo {
+        HostInfo{ip: "".to_string(), name: "".to_string(), port: 0}
+    }
 }
 
 impl SRInfo {
         
-    pub fn new(flavor: String) -> SRInfo {
+    pub fn new() -> SRInfo {
         let ip = std::env::var("HOST_IP").unwrap();
         let port_str = std::env::var("HOST_PORT").unwrap();
         let port: u16 = port_str.parse::<u16>().unwrap();
         let name = gethostname().to_str().unwrap().to_string();
-        SRInfo{ip, name, port, flavor}
+        SRInfo{ip, name, port, flavor: "".to_string(), host_info: HostInfo::empty()}
     }
 
     pub fn set_flavor(&mut self, flavor: String) {
         self.flavor = flavor;
+    }
+
+    pub fn set_host_info(&mut self, host_info: HostInfo) {
+        self.host_info = host_info;
     }
 
     pub fn get_flavor(&self) -> &String {
@@ -77,6 +86,10 @@ impl SRInfo {
 
     pub fn get_name(&self) -> &String {
         &self.name
+    }
+
+    pub fn get_host_info(&self) -> &HostInfo {
+        &self.host_info
     }
 }
 

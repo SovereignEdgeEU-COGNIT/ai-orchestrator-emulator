@@ -15,7 +15,7 @@ use ctrl_plane::file_client;
 #[tokio::main]
 async fn main() {
 
-    let sr_info = registry_client::SRInfo::new("".to_string());
+    let sr_info = registry_client::SRInfo::new();
     let reg_res = sr_info.register().await;
 
     let listeners = vec![tc_handler::new_tc_handler()];
