@@ -3,7 +3,7 @@ use tokio_tungstenite::tungstenite::connect;
 use crate::{common::ctrl_plane_url, registry_client::{HostInfo, SRInfo}};
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct JobDescription {
     pub name: String,
     pub repeat_rate: u64,
@@ -11,6 +11,7 @@ pub struct JobDescription {
     pub repeat_times: u32
 }
 
+#[derive(Debug)]
 pub struct Job {
     pub host: SRInfo,
     pub job_description: JobDescription

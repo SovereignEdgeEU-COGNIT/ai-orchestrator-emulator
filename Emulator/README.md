@@ -22,6 +22,9 @@ curl http://$CTRL_PLANE_ADDR:$CTRL_PLANE_PORT/register/host -X POST -H "Content-
 ## Docker
 
 docker system prune
+docker image rm $(docker image ls -q)
+docker container rm $(docker container ls -q)
+docker volume rm $(docker volume ls -q)
 docker build -f path_to_dockerfile -t docker_image_name .
 docker run -it image_id/image_name /bin/bash
 

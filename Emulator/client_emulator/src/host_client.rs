@@ -45,6 +45,8 @@ async fn send_client_requests(job_info: &Job) {
     let host_url = format!("http://{}:{}{}", host.get_ip(), host.get_port(), APP_PATH);
 
     exec_app(host_url, &job_info.job_description.args).await;
+
+    println!("{:?}", job_info)
     /* let mut futures = vec![];
 
     for host_url in host_urls {
