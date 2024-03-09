@@ -15,12 +15,39 @@ pub struct HostInfo {
     port: u16,
 }
 
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ClientInfo {
+    flavor: String,
+    execution_time: u32,
+    request_rate: u32,
+}
+
+impl ClientInfo {
+
+    fn empty() -> ClientInfo {
+        ClientInfo{flavor: "".to_string(), execution_time: 0, request_rate: 0}
+    }
+
+    pub fn get_flavor(&self) -> &String {
+        &self.flavor
+    }
+
+    pub fn get_execution_time(&self) -> u32 {
+        self.execution_time
+    }
+
+    pub fn get_request_rate(&self) -> u32 {
+        self.request_rate
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SRInfo {
     ip: String,
     name: String,
     port: u16,
-    flavor: String,
+    client_info: ClientInfo,
     host_info: HostInfo,
 }
 
@@ -61,19 +88,19 @@ impl SRInfo {
         let port_str = std::env::var("HOST_PORT").unwrap();
         let port: u16 = port_str.parse::<u16>().unwrap();
         let name = gethostname().to_str().unwrap().to_string();
-        SRInfo{ip, name, port, flavor: "".to_string(), host_info: HostInfo::empty()}
+        SRInfo{ip, name, port, client_info: ClientInfo::empty(), host_info: HostInfo::empty()}
     }
 
-    pub fn set_flavor(&mut self, flavor: String) {
-        self.flavor = flavor;
+    pub fn set_client_info(&mut self, client_info: ClientInfo) {
+        self.client_info = client_info;
     }
 
     pub fn set_host_info(&mut self, host_info: HostInfo) {
         self.host_info = host_info;
     }
 
-    pub fn get_flavor(&self) -> &String {
-        &self.flavor
+    pub fn get_client_info(&self) -> &ClientInfo {
+        &self.client_info
     }
 
     pub fn get_ip(&self) -> &String {

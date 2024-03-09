@@ -4,6 +4,10 @@
 chmod +x ./install_for_host.sh
 ./install_for_host.sh
 
+## Note for Simon
+Make the Images smaller:
+https://stackoverflow.com/questions/69144154/why-is-the-rust-docker-image-so-huge
+
 ## Endpoints
 curl 194.28.122.122:8000/list?node_type=host
 curl 194.28.122.122:8000/list?node_type=sr
@@ -21,7 +25,7 @@ curl http://$CTRL_PLANE_ADDR:$CTRL_PLANE_PORT/register/host -X POST -H "Content-
 
 ## Docker
 
-docker system prune
+docker system prune -a
 docker image rm $(docker image ls -q)
 docker container rm $(docker container ls -q)
 docker volume rm $(docker volume ls -q)

@@ -5,7 +5,12 @@ use std::io;
 use std::process::{Command, Child};
 
 //use crate::ctrl_plane_client::Host;
-use ctrl_plane::faas_client::{Job, JobDescription};
+use ctrl_plane::faas_client::{Job};
+//use ctrl_plane::registry_client::ClientInfo;
+
+use crate::REPEAT_TIMES;
+
+
 
 const APP_PATH: &str = "/run_dummy";
 
@@ -26,10 +31,10 @@ async fn exec_app(host_url: String, cmd_args: &String) -> Result<(), Box<dyn std
 pub fn emulate_client(job_info: Job) {
 
     tokio::spawn(async move {
-        for i in 0..job_info.job_description.repeat_times {
+        for i in 0..REPEAT_TIMES {
             send_client_requests(&job_info).await;
     
-            time::sleep(Duration::from_secs(job_info.job_description.repeat_rate)).await;
+            time::sleep(Duration::from_secs(job_info.client_info.get_request_rate().into())).await;
         }
     });
     
@@ -39,12 +44,16 @@ async fn send_client_requests(job_info: &Job) {
     //let mut set = tokio::task::JoinSet::new();
 
     //let cmd_args = Arc::new(vec!["/C", "echo hello"]);
-    let host = &job_info.host;
+    let sr_info = &job_info.sr_info;
+    let client_info = &job_info.client_info;
 
     // Extract the host url and hold the lock minimal time
-    let host_url = format!("http://{}:{}{}", host.get_ip(), host.get_port(), APP_PATH);
+    let host_url = format!("http://{}:{}{}", sr_info.get_ip(), sr_info.get_port(), APP_PATH);
 
-    exec_app(host_url, &job_info.job_description.args).await;
+    // " --all=1 --class=memory -t 20s".to_string()
+    let cmd_args = format!(" --all=1 --class={} -t {}s", client_info.get_flavor(), client_info.get_execution_time());
+
+    exec_app(host_url, &cmd_args).await;
 
     println!("{:?}", job_info)
     /* let mut futures = vec![];

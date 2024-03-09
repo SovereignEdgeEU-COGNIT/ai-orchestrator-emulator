@@ -10,12 +10,12 @@ use super::faas_server::{self, FaaSServer};
 pub struct Registry {
     hosts: Mutex<Vec<HostInfo>>,
     srs: Mutex<Vec<SRInfo>>,
-    faas_server: Arc<Mutex<FaaSServer>>,
+    faas_server: Arc<FaaSServer>,
     //flavor_map: Mutex<Vec<Vec<String>>>,
 }
 
 impl Registry {
-    pub fn new(faas_server: Arc<Mutex<FaaSServer>>) -> Registry {
+    pub fn new(faas_server: Arc<FaaSServer>) -> Registry {
         Registry {
             hosts: Mutex::new(Vec::new()),
             srs: Mutex::new(Vec::new()),
@@ -40,8 +40,17 @@ impl Registry {
         hosts.iter().for_each(|x| println!("{:?}", x));
     }
 
-    fn register_sr(&self, mut sr: SRInfo) {
-        sr = self.faas_server.lock().unwrap().initiate_faas(sr);
+    fn register_sr(&self, sr: SRInfo) {
+        let sr_opt = self.faas_server.initiate_faas(sr);
+        if let Some(sr) = sr_opt {
+            self.add_sr(sr);
+        } else {
+            println!("Failed to initiate SR");
+        }
+        //srs.iter().for_each(|x| println!("{:?}", x));
+    }
+
+    fn add_sr(&self, sr: SRInfo) {
         let mut srs = self.srs.lock().unwrap();
 
         match srs.iter_mut().find(|existing_sr | existing_sr.get_name() == sr.get_name()) {
@@ -52,8 +61,6 @@ impl Registry {
                 srs.push(sr);
             }
         }
-
-        srs.iter().for_each(|x| println!("{:?}", x));
     }
 
     fn get_hosts(&self) -> Vec<HostInfo> {
@@ -119,7 +126,7 @@ fn get_host_flavors(hosts_shared: &State<Mutex<Vec<Host>>>, flavor_map_shared: &
     Json(flavor_mapping)
 } */
 
-pub fn initiate(rocket: Rocket<Build>, faas_server: Arc<Mutex<FaaSServer>>) -> Rocket<Build>{
+pub fn initiate(rocket: Rocket<Build>, faas_server: Arc<FaaSServer>) -> Rocket<Build>{
     rocket.mount("/", routes![register_node, list])
         .manage(Registry::new(faas_server))
 }

@@ -41,7 +41,7 @@ pub async fn rocket() {
 
     let flavor_map = Vec::<Vec::<String>>::new();
     let flavor_map_shared = Mutex::new(flavor_map); */
-    let faas_server = Arc::new(Mutex::new(FaaSServer::new()));
+    let faas_server = Arc::new(FaaSServer::new());
     let mut rocket = rocket::build();
     rocket = rocket.mount("/", routes![index]);
     rocket = registry_server::initiate(rocket, faas_server.clone());

@@ -179,7 +179,7 @@ func (dc *DockerConfig) StartContainer(cpu float32, memory int) (string, string,
 	//envVars := fmt.Sprintf("-e CTRL_PLANE_ADDR=\"%s\" -e CTRL_PLANE_PORT=\"%s\" -e HOST_IP=\"%s\" -e HOST_PORT=\"%d\"", dc.CtrlPlaneAddr, dc.CtrlPlanePort, dc.HostInfo.LocalIP, hostPort)
 	//envVars but as arrays of "-e" and "key=value" pairs with values formated using the dc struct
 	envVars := []string{"-e", "CTRL_PLANE_ADDR=" + dc.CtrlPlaneAddr, "-e", "CTRL_PLANE_PORT=" + dc.CtrlPlanePort, "-e", "HOST_IP=" + dc.HostInfo.LocalIP, "-e", "HOST_PORT=" + strconv.Itoa(int(hostPort))}
-	containerName := fmt.Sprintf("%s_%s_%d", dc.HostInfo.Hostname, "emu_sr", len(dc.contIDNameMap))
+	containerName := fmt.Sprintf("%s_%s_%d", dc.HostInfo.Hostname, "emu_sr", hostPort)
 
 	cmdArgs := []string{"run", "--detach=true", "--name", containerName, "--hostname", containerName}
 	if cpu > 0 {
@@ -240,7 +240,7 @@ func (dc *DockerConfig) startSrContainer(cpu float32, memory int, hostPort uint1
 		cmdArgs = append(cmdArgs, "--memory", fmt.Sprintf("%dm", memory))
 	}
 	containerPort := hostPort
-	cmdArgs = append(cmdArgs, "-p", fmt.Sprintf("%d:%d", hostPort, containerPort))
+	cmdArgs = append(cmdArgs, "-p", fmt.Sprintf("%d:%d", hostPort, containerPort), "--rm")
 	//add envVars to cmdArgs
 	cmdArgs = append(cmdArgs, envVars...)
 	cmdArgs = append(cmdArgs, dc.imageName)
@@ -309,7 +309,7 @@ func (dc *DockerConfig) startClientEmulator() (string, error) {
 		"--name=client_emulator",
 		"--hostname=client_emulator",
 		"--env-file=../.env",
-		//"--rm",
+		"--rm",
 		"emulator-client_emulator"}
 
 	return startContainer(cmdArgs)

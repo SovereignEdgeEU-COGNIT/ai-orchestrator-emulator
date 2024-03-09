@@ -7,6 +7,8 @@ use ctrl_plane::file_client;
 use ctrl_plane::faas_client::{self, JobDescription};
 use crate::host_client::emulate_client;
 
+pub const REPEAT_TIMES: i32 = 50000;
+
 #[tokio::main]
 async fn main() {
     
@@ -33,7 +35,7 @@ async fn main() {
     //ctrl_plane_client::subscribe_jobs().await;
 
     //faas_client::subscribe_jobs with job_descriptions and host_client::emulate_client() function 
-    faas_client::subscribe_jobs(job_descriptions, emulate_client).await;
+    faas_client::subscribe_jobs(emulate_client).await;
 
     //time::sleep(Duration::from_secs(5)).await;
 }    

@@ -1,5 +1,5 @@
 version: '3'
-
+# Make the images smaller https://stackoverflow.com/questions/69144154/why-is-the-rust-docker-image-so-huge
 services:
   emulated_sr:
     build:
