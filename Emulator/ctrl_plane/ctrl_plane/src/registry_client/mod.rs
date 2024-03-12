@@ -83,12 +83,16 @@ impl HostInfo {
 
 impl SRInfo {
         
-    pub fn new() -> SRInfo {
+    pub fn empty() -> SRInfo {
         let ip = std::env::var("HOST_IP").unwrap();
         let port_str = std::env::var("HOST_PORT").unwrap();
         let port: u16 = port_str.parse::<u16>().unwrap();
         let name = gethostname().to_str().unwrap().to_string();
         SRInfo{ip, name, port, client_info: ClientInfo::empty(), host_info: HostInfo::empty()}
+    }
+
+    pub fn new(ip: String, port: u16, name: String, client_info: ClientInfo, host_info: HostInfo) -> SRInfo {
+        SRInfo{ip, port, name, client_info, host_info}
     }
 
     pub fn set_client_info(&mut self, client_info: ClientInfo) {

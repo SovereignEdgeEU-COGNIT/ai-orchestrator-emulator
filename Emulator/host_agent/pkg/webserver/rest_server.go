@@ -15,6 +15,12 @@ var dockerConfig *docker.DockerConfig
 type StartContainerRequest struct {
 	CPU    float32 `json:"cpu"`
 	Memory int     `json:"memory"`
+	Flavor string  `json:"flavor"`
+}
+
+type StartContainerResponse struct {
+	ContainerName string `json:"containerName"`
+	Port          uint16 `json:"port"`
 }
 
 func handleStartContainer(w http.ResponseWriter, r *http.Request) {
@@ -35,8 +41,8 @@ func handleStartContainer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("Starting container with CPU: ", req.CPU, " and Memory: ", req.Memory)
-	_, containerName, err := dockerConfig.StartContainer(req.CPU, req.Memory)
+	fmt.Println("Starting container with CPU: ", req.CPU, " and Memory: ", req.Memory, " and Flavor: ", req.Flavor)
+	_, containerName, port, err := dockerConfig.StartContainer(req.CPU, req.Memory, req.Flavor)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -45,7 +51,11 @@ func handleStartContainer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(containerName)
+	container := StartContainerResponse{
+		ContainerName: containerName,
+		Port:          port,
+	}
+	json.NewEncoder(w).Encode(container)
 }
 
 // function to register the host agent with the controller

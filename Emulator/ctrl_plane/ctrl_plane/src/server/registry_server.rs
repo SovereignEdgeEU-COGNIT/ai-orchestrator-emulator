@@ -41,12 +41,12 @@ impl Registry {
     }
 
     fn register_sr(&self, sr: SRInfo) {
-        let sr_opt = self.faas_server.initiate_faas(sr);
+        /* let sr_opt = self.faas_server.initiate_faas(sr);
         if let Some(sr) = sr_opt {
             self.add_sr(sr);
         } else {
             println!("Failed to initiate SR");
-        }
+        } */
         //srs.iter().for_each(|x| println!("{:?}", x));
     }
 

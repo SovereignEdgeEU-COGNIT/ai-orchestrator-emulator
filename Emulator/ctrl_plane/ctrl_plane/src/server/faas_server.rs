@@ -1,5 +1,6 @@
 use rocket::futures::SinkExt;
 use rocket_ws::{WebSocket, Channel};
+use tokio_tungstenite::tungstenite::client;
 use std::collections::{HashMap, LinkedList};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex};
@@ -8,7 +9,7 @@ use rocket::{State, get, post, Rocket, Build, routes};
 use serde::{Serialize, Deserialize};
 
 use crate::registry_client::{HostInfo, NodeInfo, SRInfo, ClientInfo};
-use crate::host_agent_client::{self};
+use crate::host_agent_client::{self, StartContainerResponse};
 
 use super::registry_server;
 
@@ -61,14 +62,16 @@ impl FaaSServer {
         }
     }
 
-    fn add_uninitated_faas(&self, sr_name: String, faas_req: FaaSReq) {
+    /* fn add_uninitated_faas(&self, sr_name: String, faas_req: FaaSReq) {
         let mut uninitiated_faas = self.uninitiated_faas.lock().unwrap();
         println!("Requested start of sr {}, {:?}", sr_name, faas_req);
         uninitiated_faas.insert(sr_name.clone(), faas_req);
-    }
+    } */
 
     pub fn initiate_faas(&self, mut sr_info: SRInfo) -> Option<SRInfo> {
-        let mut uninitiated = true;
+        self.send(sr_info.clone());
+        return Some(sr_info);
+        /* let mut uninitiated = true;
         let mut failed_attempts = 0;
         let max_attempts = 120;
 
@@ -97,7 +100,7 @@ impl FaaSServer {
         }
         
         
-        return None;
+        return None; */
     }
 }
 
@@ -143,9 +146,18 @@ async fn start_function(
     ) {
 
     let sr_env = faas_req.0.sr_env.clone();
+    let flavor = faas_req.0.client_info.get_flavor();
     let host_info = faas_req.0.host_info.clone();
-    let sr_name = host_agent_client::start_sr(host_info, sr_env.cpu, sr_env.mem).await.unwrap();
-    server.add_uninitated_faas(sr_name, faas_req.0);
+    let sr_container = host_agent_client::start_sr(host_info, sr_env.cpu, sr_env.mem, flavor).await.unwrap();
+
+    SRInfo::new(
+        faas_req.0.host_info.get_ip().clone(),
+        sr_container.container_port.clone(),
+        sr_container.container_name.clone(),
+        faas_req.0.client_info.clone(),
+        faas_req.0.host_info.clone(),
+    );
+    //server.add_uninitated_faas(sr_name, faas_req.0);
     //let sr_info: SRInfo = registry_server::subscribe_sr(sr_name.clone()).await;
     /* let mut hosts = hosts_shared.lock().unwrap();
     let mut flavor_map = flavor_map_shared.lock().unwrap();

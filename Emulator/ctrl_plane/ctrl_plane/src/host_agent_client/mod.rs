@@ -13,26 +13,35 @@ pub struct HostAgentClient {
 struct StartContainerRequest {
     cpu: f32,
     memory: i32,
+    flavor: String,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+struct StartContainerResponse {
+    pub container_name: String,
+    pub container_port: u16,
+}
+
 
 fn host_agent_url(host: HostInfo) -> String {
     format!("http://{}:{}/start-container", host.get_ip(), host.get_port())
 }
 
-pub async fn start_sr(host: HostInfo, cpu: f32, memory: i32) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn start_sr(host: HostInfo, cpu: f32, memory: i32, flavor: &String) -> Result<StartContainerResponse, Box<dyn std::error::Error>> {
     let url = host_agent_url(host);
     let client = reqwest::Client::new();
 
     let container_req = StartContainerRequest {
         cpu: cpu,
         memory: memory,
+        flavor: flavor.clone(),
     };
     let res = client.post(url)
     .json(&container_req)
     .send()
     .await?;
 
-    let res_val = res.json::<String>().await?;
+    let res_val = res.json::<StartContainerResponse>().await?;
 
     //println!("{}", res.status().as_str());
 

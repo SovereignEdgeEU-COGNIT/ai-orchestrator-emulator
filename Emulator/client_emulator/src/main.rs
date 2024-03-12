@@ -14,12 +14,12 @@ async fn main() {
     
     let mut file_cache = file_client::FileClient::new();
 
-    let cpu_job = JobDescription{name: "cpu".to_string(), repeat_rate: 40, repeat_times: 50000, args: " --all=1 --class=cpu  -t 20s".to_string()};
+    /* let cpu_job = JobDescription{name: "cpu".to_string(), repeat_rate: 40, repeat_times: 50000, args: " --all=1 --class=cpu  -t 20s".to_string()};
     let disk_job = JobDescription{name: "io".to_string(), repeat_rate: 40, repeat_times: 50000, args: " --all=1 --class=io -t 20s".to_string()};
     let mem_job = JobDescription{name: "mem".to_string(), repeat_rate: 40, repeat_times: 50000, args: " --all=1 --class=memory -t 20s".to_string()};
     let net_job = JobDescription{name: "net".to_string(), repeat_rate: 40, repeat_times: 50000, args: " --all=1 --class=network -t 20s".to_string()};
     
-    let job_descriptions = vec![cpu_job, disk_job, mem_job, net_job];
+    let job_descriptions = vec![cpu_job, disk_job, mem_job, net_job]; */
     
     //let hosts = Arc::new(Mutex::new(Vec::new()));
 

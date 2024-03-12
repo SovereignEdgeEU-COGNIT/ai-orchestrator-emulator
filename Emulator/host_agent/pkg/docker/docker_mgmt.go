@@ -65,7 +65,7 @@ func NewDockerConfig(host util.Host, imageName string) *DockerConfig {
 	}
 	log.Default().Println("Images built successfully")
 
-	if config.HostInfo.LocalIP == config.CtrlPlaneAddr {
+	if config.HostInfo.LocalIP == config.CtrlPlaneAddr || config.CtrlPlaneAddr == "192.168.1.156" {
 		log.Default().Println("Starting Prometheus...")
 		if output, err := config.startPrometheus(); err != nil {
 			config.StopAllContainers()
@@ -168,10 +168,10 @@ func startContainer(cmdArgs []string) (string, error) {
 } */
 
 // StartContainer starts a Docker container with the specified configuration
-func (dc *DockerConfig) StartContainer(cpu float32, memory int) (string, string, error) {
+func (dc *DockerConfig) StartContainer(cpu float32, memory int, flavor string) (string, string, uint16, error) {
 	hostPort := dc.allocatePort()
 	if hostPort == 0 {
-		return "", "", fmt.Errorf("no available port found")
+		return "", "", 0, fmt.Errorf("no available port found")
 	}
 
 	containerPort := hostPort
@@ -179,7 +179,7 @@ func (dc *DockerConfig) StartContainer(cpu float32, memory int) (string, string,
 	//envVars := fmt.Sprintf("-e CTRL_PLANE_ADDR=\"%s\" -e CTRL_PLANE_PORT=\"%s\" -e HOST_IP=\"%s\" -e HOST_PORT=\"%d\"", dc.CtrlPlaneAddr, dc.CtrlPlanePort, dc.HostInfo.LocalIP, hostPort)
 	//envVars but as arrays of "-e" and "key=value" pairs with values formated using the dc struct
 	envVars := []string{"-e", "CTRL_PLANE_ADDR=" + dc.CtrlPlaneAddr, "-e", "CTRL_PLANE_PORT=" + dc.CtrlPlanePort, "-e", "HOST_IP=" + dc.HostInfo.LocalIP, "-e", "HOST_PORT=" + strconv.Itoa(int(hostPort))}
-	containerName := fmt.Sprintf("%s_%s_%d", dc.HostInfo.Hostname, "emu_sr", hostPort)
+	containerName := fmt.Sprintf("%s_%s_%s_%d", dc.HostInfo.Hostname, "emu_sr", flavor, hostPort)
 
 	cmdArgs := []string{"run", "--detach=true", "--name", containerName, "--hostname", containerName}
 	if cpu > 0 {
@@ -198,12 +198,12 @@ func (dc *DockerConfig) StartContainer(cpu float32, memory int) (string, string,
 
 	if err != nil {
 		fmt.Println("Error starting container: ", err.Error(), " output: ", output)
-		return "", "", err
+		return "", "", 0, err
 	} else {
 		containerID := strings.TrimSpace(output)
 		fmt.Println("Container started successfully, ID: ", containerID)
 		dc.contIDNameMap[containerID] = containerName
-		return containerID, containerName, err
+		return containerID, containerName, hostPort, nil
 	}
 }
 
@@ -240,7 +240,7 @@ func (dc *DockerConfig) startSrContainer(cpu float32, memory int, hostPort uint1
 		cmdArgs = append(cmdArgs, "--memory", fmt.Sprintf("%dm", memory))
 	}
 	containerPort := hostPort
-	cmdArgs = append(cmdArgs, "-p", fmt.Sprintf("%d:%d", hostPort, containerPort), "--rm")
+	cmdArgs = append(cmdArgs, "-p", fmt.Sprintf("%d:%d", hostPort, containerPort) /* , "--rm" */)
 	//add envVars to cmdArgs
 	cmdArgs = append(cmdArgs, envVars...)
 	cmdArgs = append(cmdArgs, dc.imageName)
@@ -261,7 +261,7 @@ func (dc *DockerConfig) startMonitoringContainer() (string, error) {
 		"--publish=8080:8080",
 		"--detach=true",
 		"--name=cadvisor",
-		"--rm",
+		//"--rm",
 		"emulator-cadvisor"}
 
 	return startContainer(cmdArgs)
@@ -283,7 +283,7 @@ func (dc *DockerConfig) startPrometheus() (string, error) {
 		"--publish=9090:9090",
 		"--detach=true",
 		"--name=prometheus",
-		"--rm",
+		//"--rm",
 		"emulator-prometheus"}
 
 	return startContainer(cmdArgs)
@@ -296,7 +296,7 @@ func (dc *DockerConfig) startCtrlPlane() (string, error) {
 		"--name=ctrl_plane",
 		"--hostname=ctrl_plane",
 		"--env-file=../.env",
-		"--rm",
+		/* "--rm", */
 		"emulator-ctrl_plane"}
 
 	return startContainer(cmdArgs)
@@ -309,7 +309,7 @@ func (dc *DockerConfig) startClientEmulator() (string, error) {
 		"--name=client_emulator",
 		"--hostname=client_emulator",
 		"--env-file=../.env",
-		"--rm",
+		/* "--rm", */
 		"emulator-client_emulator"}
 
 	return startContainer(cmdArgs)
