@@ -16,7 +16,7 @@ HOST_NAMES = ["Cognit-test", "Cognit-test2"]
 FLAVORS = ["cpu", "memory", "filesystem", "network"]
 SPAWN_COUNT = [2, 2, 1, 1]
 
-mem_range = range(256, 1537, 256)
+mem_range = range(512, 1537, 256)
 
 random.seed(2)
 

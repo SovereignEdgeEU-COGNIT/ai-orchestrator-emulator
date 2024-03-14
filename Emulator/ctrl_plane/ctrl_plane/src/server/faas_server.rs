@@ -11,7 +11,7 @@ use serde::{Serialize, Deserialize};
 use crate::registry_client::{HostInfo, NodeInfo, SRInfo, ClientInfo};
 use crate::host_agent_client::{self, StartContainerResponse};
 
-use super::registry_server;
+use super::registry_server::{self, Registry};
 
 
 // Define a struct to hold WebSocket connections
@@ -36,15 +36,17 @@ struct FaaSReq {
 pub struct FaaSServer {
     client_emulator: Mutex<Option<WebSocketConnection>>,
     uninitiated_faas: Mutex<HashMap<String, FaaSReq>>,
+    registry_server: Arc<Mutex<Registry>>,
     //host_agent_client: Mutex<HostAgentClient>,
 }
 
 impl FaaSServer {
 
-    pub fn new(/* host_agent_client_mutex: Mutex<HostAgentClient> */) -> FaaSServer {
+    pub fn new(registry_server: Arc<Mutex<Registry>>/* host_agent_client_mutex: Mutex<HostAgentClient> */) -> FaaSServer {
         FaaSServer {
             client_emulator: Mutex::new(None),
             uninitiated_faas: Mutex::new(HashMap::new()),
+            registry_server: registry_server,
             //host_agent_client: host_agent_client_mutex,
         }
     }
@@ -68,8 +70,13 @@ impl FaaSServer {
         uninitiated_faas.insert(sr_name.clone(), faas_req);
     } */
 
-    pub fn initiate_faas(&self, mut sr_info: SRInfo) -> Option<SRInfo> {
+    pub fn initiate_faas(&self, sr_info: SRInfo) -> Option<SRInfo> {
+
+        let reg_server = self.registry_server.lock().unwrap();
+        reg_server.register_sr(sr_info.clone());
+
         self.send(sr_info.clone());
+
         return Some(sr_info);
         /* let mut uninitiated = true;
         let mut failed_attempts = 0;
@@ -150,13 +157,14 @@ async fn start_function(
     let host_info = faas_req.0.host_info.clone();
     let sr_container = host_agent_client::start_sr(host_info, sr_env.cpu, sr_env.mem, flavor).await.unwrap();
 
-    SRInfo::new(
+    let sr_info = SRInfo::new(
         faas_req.0.host_info.get_ip().clone(),
         sr_container.container_port.clone(),
         sr_container.container_name.clone(),
         faas_req.0.client_info.clone(),
         faas_req.0.host_info.clone(),
     );
+    server.initiate_faas(sr_info);
     //server.add_uninitated_faas(sr_name, faas_req.0);
     //let sr_info: SRInfo = registry_server::subscribe_sr(sr_name.clone()).await;
     /* let mut hosts = hosts_shared.lock().unwrap();

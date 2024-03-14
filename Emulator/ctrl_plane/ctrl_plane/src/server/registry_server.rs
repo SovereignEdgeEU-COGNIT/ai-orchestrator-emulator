@@ -10,16 +10,16 @@ use super::faas_server::{self, FaaSServer};
 pub struct Registry {
     hosts: Mutex<Vec<HostInfo>>,
     srs: Mutex<Vec<SRInfo>>,
-    faas_server: Arc<FaaSServer>,
+    //faas_server: Arc<FaaSServer>,
     //flavor_map: Mutex<Vec<Vec<String>>>,
 }
 
 impl Registry {
-    pub fn new(faas_server: Arc<FaaSServer>) -> Registry {
+    pub fn new(/* faas_server: Arc<FaaSServer> */) -> Registry {
         Registry {
             hosts: Mutex::new(Vec::new()),
             srs: Mutex::new(Vec::new()),
-            faas_server: faas_server,
+            //faas_server: faas_server,
             //flavor_map: Mutex::new(Vec::new()),
         }
     }
@@ -40,13 +40,14 @@ impl Registry {
         hosts.iter().for_each(|x| println!("{:?}", x));
     }
 
-    fn register_sr(&self, sr: SRInfo) {
-        /* let sr_opt = self.faas_server.initiate_faas(sr);
-        if let Some(sr) = sr_opt {
-            self.add_sr(sr);
+    pub fn register_sr(&self, sr: SRInfo) {
+        /* let sr_opt = self.faas_server.initiate_faas(sr); */
+        self.add_sr(sr);
+        /* if let Some(sr) = sr_opt {
+            
         } else {
             println!("Failed to initiate SR");
-        } */
+        }  */
         //srs.iter().for_each(|x| println!("{:?}", x));
     }
 
@@ -86,7 +87,9 @@ impl Registry {
  */
 // curl 194.28.122.122:8000/register/host -X POST -H "Content-Type: application/json" -d '{"ip": "
 #[post("/register", format = "json", data = "<node>")]
-fn register_node(node: Json<NodeType>, registry: &State<Registry>) {
+fn register_node(node: Json<NodeType>, registry_arc: &State<Arc<Mutex<Registry>>>) {
+
+    let registry = registry_arc.lock().unwrap();
     
     match node.0 {
         NodeType::Host(host) => {
@@ -100,7 +103,9 @@ fn register_node(node: Json<NodeType>, registry: &State<Registry>) {
 
 //curl 194.28.122.122:8000/list?node_type=host
 #[get("/list?<node_type>")]
-fn list(node_type: String, registry: &State<Registry>) -> Json<Vec<NodeType>> {
+fn list(node_type: String, registry_arc: &State<Arc<Mutex<Registry>>>) -> Json<Vec<NodeType>> {
+
+    let registry = registry_arc.lock().unwrap();
 
     match node_type.as_str() {
         "host" => {
@@ -126,7 +131,7 @@ fn get_host_flavors(hosts_shared: &State<Mutex<Vec<Host>>>, flavor_map_shared: &
     Json(flavor_mapping)
 } */
 
-pub fn initiate(rocket: Rocket<Build>, faas_server: Arc<FaaSServer>) -> Rocket<Build>{
+pub fn initiate(rocket: Rocket<Build>, registry_server: Arc<Mutex<Registry>> /*, faas_server: Arc<FaaSServer> */) -> Rocket<Build>{
     rocket.mount("/", routes![register_node, list])
-        .manage(Registry::new(faas_server))
+        .manage(registry_server)
 }

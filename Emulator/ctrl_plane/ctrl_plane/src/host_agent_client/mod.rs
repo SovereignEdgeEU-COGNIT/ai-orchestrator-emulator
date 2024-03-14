@@ -17,7 +17,7 @@ struct StartContainerRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct StartContainerResponse {
+pub struct StartContainerResponse {
     pub container_name: String,
     pub container_port: u16,
 }

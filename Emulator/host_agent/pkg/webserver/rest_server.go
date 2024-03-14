@@ -19,8 +19,8 @@ type StartContainerRequest struct {
 }
 
 type StartContainerResponse struct {
-	ContainerName string `json:"containerName"`
-	Port          uint16 `json:"port"`
+	ContainerName string `json:"container_name"`
+	Port          uint16 `json:"container_port"`
 }
 
 func handleStartContainer(w http.ResponseWriter, r *http.Request) {
